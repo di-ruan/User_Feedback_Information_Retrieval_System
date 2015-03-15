@@ -1,0 +1,140 @@
+COMS E6111 Advanced Database Systems - Project 1
+
+a) Group members:
+
+    Di Ruan (dr2763)
+    Jie-Gang Kuang (jk3735)
+
+
+
+b) Files:
+
+    /--+--README
+       +--main.py
+       +--Computation.py
+       +--Document.py
+       +--QueryExpansion.py
+       +--Search_engine.py
+       +--Xml_parser.py
+       +--stopwords.txt
+       +--transcript_musk.txt
+       +--transcript_gates.txt
+       +--transcript_columbia.txt
+
+
+
+c) How to run:
+
+    python main.py <bing account key> <precision> <query>
+    where:
+        * bing account key: the Bing Account Key used for searching
+        * precision: a real number between 0 and 1
+        * query: a list of words in single quotes
+
+
+d) Internal design:
+
+    Overall structure: Our program is mainly composed of four parts: search, parsing, judgement, and query expansion.
+
+    main.py: The entry point of the program. At the beginning of the routine, the query term list is processed by the
+    search engine to form the request to the Bing server. In our setting, the result of the search from the Bing server
+    will contain top-10 relevant web sites and be of XML format. The XML object is then parsed to get the information
+    for users to decide whether each result is indeed relevant or not. After the judgement process is done, the program
+    terminates if the desired relevance of the result is met or there is totally no relevant result. However, when there
+    are relevant results but the relevance requirement is not met, the routine must be redone to get more relevant
+    results. For the next routine, we pass the entire judgement result including the content of search results to the
+    query expansion module which can compute the best fit words for the next round. The routine is then repeated until
+    the relevance requirement is met.
+
+    Computation.py: Contain some vector calculation methods that are used in the query expansion calculation
+
+    Search_engine.py: Format the query url that is used by Bing API and get the result back
+
+    Xml_parser.py: Parse the XML result returned by Bing so that we can retrieve the part of information
+    that we are interested in
+
+    QueryExpansion.py: Contain the query expansion algorithm which will be explained in detail in part(e)
+
+    Document.py: Define a class for representing each document returned by the Bing Search API
+
+
+
+
+e) Details of query modification:
+
+The query modification algorithm is composed of the following parts:
+1. remove the symbols and stop-words
+        In most cases, stop words add little semantic value to a sentence. They are filler words that help sentences
+    flow better, but provide very little context on their own. And we have found a list of common English stop words
+    from Wikipedia.
+
+2. Give different weights to title and description
+        Based on our survey of the research papers, we find that we need to assign different weights to the terms in
+    different part. For example, if a term is in the title, we should assign more weight to it. Therefore, after
+    numbers of experiments, we have chosen to assign 1.2 to the terms in the title while 1 to the others.
+
+3. calculate the normalized term frequency for each document
+        We take the normalized term frequency instead of the original term frequency. This is calculated by dividing
+    the original term frequency by the length of the document.
+
+4. Compute tf-idf
+        In our algorithm, tf is the normalized term frequency in the document and idf(t) = log N/M(t), where M is the
+    number of documents that contain term t. And then we compute tfidf = tf * idf.
+
+5. Rocchio algorithm
+        The key part of our query modification algorithm is Rocchio algorithm, which is also the most popular
+    algorithm in query expansion. The new vector is calculated by:
+                        Q1 = a*Q0 + b*sum(R/n1) - c*sum(NR/n2)
+    We have chosen a=1, b=0.75, c=0.15 based on the survey.
+
+
+
+f) Bing Search Account Key: 6SBqV1l4XaDnfx+w4rPVqyEgtNJqvUJu50wXdg5njhk
+
+
+
+g) Additional information:
+
+1. Character encoding:
+        When we construct the inverted files, one of the nasty problems we encounter is character encoding. Some results
+    in XML are returned containing unicode encoding characters and some non-ascii characters, which introduce some
+    unexpected results. Our approach is simply replacing each of them with a whitespace. In our observation, because the
+    most information lies in alphanumeric characters which are most of the time ascii-encoded, even if we replace the
+    non-ascii characters with whitespaces, the important information is still preserved.
+
+2. Phrases and order of the query terms:
+        In our implementation, we do not focus on phrases but only treat words as terms. One of the reasons is that to
+    distinguish phrases from words, we need statistically sustainable data to support the decisions during processing.
+    However, the information in the titles, the urls, and the descriptions are far from enough to establish the reliable
+    assistance to the computation.
+
+        What we guaranteed in our method is that the order of augmented terms follows the scores computed with Rocchio's
+    algorithm. Sometimes it could be non-optimum. For example, after searching with 'Big Apple' and judge for New York,
+    the added query terms could be "Big Apple york new". Granted, the result would be the best with "Big Apple new york",
+    but when the general algorithm is applied with such statistically deficient data, the result could sometimes be worse.
+    Rather than occasionally diverging from the desired direction, we decide to use the guaranteed method to augment the
+    query.
+
+3. Result evaluation:
+        We ran our program the with the three examples "musk", "gates" and "columbia", the program can achieve a
+    precision of 0.9 after 1, 1 and 2 iterations respectively, which is better than the reference program.
+
+        In addition to the relevance judgement, we also check the augmented query terms computed with our method.
+    Unfortunately, because the amount of data is rather small, we cannot evaluate the quality statistically. However,
+    we compare our augmented terms with the result of the reference program, we are able to claim that our method is at
+    least parallel to the reference program. For example, with the query, 'Big Apple', both programs could augment the
+    query with 'city york'.
+
+        In order to improve on the performance, the first thing we can do should be rearranging word order as mentioned
+    above. Nevertheless, arbitrarily changing the order based on statistically unreliable data could produce different
+    results. Therefore we stay with the solution before we can come up with a better way in the future.
+
+
+
+h) Reference
+
+[1] A Survey of Automatic Query Expansion in Information Retrieval, CLAUDIO CARPINETO and GIOVANNI ROMANO,
+http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.307.8469&rep=rep1&type=pdf
+
+[2] RELEVANCE FEEDBACK AND OTHER QUERY MODIFICATION TECHNIQUES, Donna Harman,
+http://orion.lcg.ufrj.br/Dr.Dobbs/books/book5/chap11.htm
